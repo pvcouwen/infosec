@@ -2,6 +2,10 @@ from Server import Server
 
 # from Client import Client
 
+# This main script simulates all communcation lines between Client Server and Storage
+# We assume that everything that passes between Client and Server is over the internet can be eavesdropped
+# Communication between Server and Storage is over a secure bus
+
 if __name__ == "__main__":
     # Vote sending
     server = Server()
@@ -40,4 +44,3 @@ if __name__ == "__main__":
     encrypted_vote = Server.handle_storage_ID_respone(storage_response)
     # Server -> Client : Server sends encrypted vote message to client
     # Client.see_vote(encrypted_vote)
-
