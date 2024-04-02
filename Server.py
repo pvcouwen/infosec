@@ -7,7 +7,6 @@ from Crypto.Random import get_random_bytes
 class Server:
     def __init__(self):
         self._keypair = RSA.generate(2048)
-        self.public_key = self._keypair.publickey()
         self._bad_ips = [2]
         self._sym_key = None
 
@@ -50,7 +49,7 @@ class Server:
         return encrypted
 
     def share_public_key(self):
-        return self.public_key
+        return self._keypair.publickey()
 
     def firewall(self, ip):
         """
