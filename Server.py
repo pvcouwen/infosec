@@ -76,6 +76,7 @@ class Server:
             self._sym_key = sym_key
             full_message = self.RSA_encrypt(decrypted_secret + sym_key,
                                             client_key)
+            print(sym_key, "MESSAGE SENT")
             return full_message
         else:
             print("I don't trust this IP!")
@@ -86,9 +87,11 @@ class Server:
         :param message: the message containing the vote of the client
         :return: the vote & verification that the storage will use
         """
-        self.sym_decrypt(message)
+        message = self.sym_decrypt(message)
         vote = message[15:]  # TODO vaste votelengte definieren
         verification = message[:15]  # TODO vaste verification lengte definieren
+        print(vote,"IS DECRYPT V")
+        print(verification,"IS DECRYPT ID")
         # Dit moet naar storage voor checken
         return vote, verification
 
