@@ -31,7 +31,7 @@ if __name__ == "__main__":
     # Client -> Server : Client requests symmetric key by sending secret, his public key and ip
     sym_key_message = Server.handle_sym_key_request(client_key, verification_secret, ip)
     # Server -> Client : Server sends symmetric key + secret
-    encrypted_vote_ID = 123  # =  client.vote_generate(sym_key_message)
+    encrypted_vote_ID = 123  # =  client.ID_generate(sym_key_message)
     # Client -> Server : Client sends vote ID
     decrypted_id = Server.handle_vote_request(encrypted_vote_ID)
     # Server -> Storage : decrypted ID sent to storage to check
