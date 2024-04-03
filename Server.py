@@ -92,8 +92,8 @@ class Server:
         if len(message) != 32:
             print("message length is wrong!")
             return None
-        vote = message[16:]  # TODO vaste votelengte definieren
-        verification = message[:16]  # TODO vaste verification lengte definieren
+        vote = message[16:]
+        verification = message[:16]
         # Dit moet naar storage voor checken
         return vote, verification
 
