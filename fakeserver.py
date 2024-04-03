@@ -4,11 +4,12 @@ from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 
 
-class Server:
+class FakeServer:
     def __init__(self):
         self._keypair = RSA.generate(2048)
         self._bad_ips = [2]
-        self._sym_key = None
+        fake_sym_key = get_random_bytes(16)
+        self._sym_key = fake_sym_key
 
     def RSA_decrypt(self, message):
         """
@@ -30,23 +31,25 @@ class Server:
         encrypted = encryptor.encrypt(message)
         return encrypted
 
-    def sym_decrypt(self, message):
+    def sym_decrypt(self, message, nonce):
         """
+        :param nonce: the nonce used in AES
         :param message: message to decrypt
         :return: decrypted message
         """
-        cipher = AES.new(self._sym_key, AES.MODE_CTR)
+        cipher = AES.new(self._sym_key, AES.MODE_EAX, nonce=nonce)
         decrypted = cipher.decrypt(message)
         return decrypted
 
     def sym_encrypt(self, message):
         """
         :param message: message to encrypt
-        :return: encrypted message
+        :return: encrypted message and the nonce used
         """
-        cipher = AES.new(self._sym_key, AES.MODE_CTR)
+        cipher = AES.new(self._sym_key, AES.MODE_EAX)
+        nonce = cipher.nonce
         encrypted = cipher.encrypt(message)
-        return encrypted
+        return encrypted, nonce
 
     def send_fake_sym_key(self, client_key, verification_secret, ip):
         """
@@ -56,57 +59,22 @@ class Server:
         :return: the RSA encrypted message with the secret & sym key
         """
         fake_secret = get_random_bytes(16)
-        fake_sym_key = get_random_bytes(16)
-        self._sym_key = fake_sym_key
-        full_message = self.RSA_encrypt(fake_secret + fake_sym_key,
+        full_message = self.RSA_encrypt(fake_secret + self._sym_key,
                                             client_key)
-        print(sym_key, "MESSAGE SENT")
         return full_message
 
-    def handle_vote(self, message):
+    def send_fake_vote_response(self):
         """
-        :param message: the message containing the vote of the client
-        :return: the vote & verification that the storage will use
-        """
-        message = self.sym_decrypt(message)
-        vote = message[15:]  # TODO vaste votelengte definieren
-        verification = message[:15]  # TODO vaste verification lengte definieren
-        print(vote,"IS DECRYPT V")
-        print(verification,"IS DECRYPT ID")
-        # Dit moet naar storage voor checken
-        return vote, verification
-
-    def handle_storage_vote_response(self, response):
-        """
-        :param response: the storage servers response, either the vote ID or False
         :return: sym encrypted message with the random verification ID of the vote
         """
-        if response is False:
-            print("This voter is not eligible!")
-            return None
-        else:
-            # Encrypt
-            encrypted_message = self.sym_encrypt(response)
-            return encrypted_message
+        fake_id = b'FAKE ID'
+        encrypted_message, nonce = self.sym_encrypt(response)
+        return encrypted_message, nonce
 
-    def handle_vote_request(self, message):
+    def send_fake_ID_response(self):
         """
-        :param vote_ID: The ID of the vote encrypted with sym_encr
-        :return:
+        :return: fake sym encrypted message with the random verification ID of the vote
         """
-        decrypted_id = self.sym_decrypt(message)
-        # This should be passed to storage
-        return decrypted_id
-
-    def handle_storage_ID_respone(self, response):
-        """
-        :param response: the storage servers response, either the vote data or False
-        :return: sym encrypted message with the random verification ID of the vote
-        """
-        if response is False:
-            print("This vote ID is not recognized!")
-            return None
-        else:
-            # Encrypt
-            encrypted_message = self.sym_encrypt(response)
-            return encrypted_message
+        fake_vote = "16karakters_fake"
+        encrypted_message = self.sym_encrypt(fake_vote)
+        return encrypted_message
