@@ -30,23 +30,25 @@ class Server:
         encrypted = encryptor.encrypt(message)
         return encrypted
 
-    def sym_decrypt(self, message):
+    def sym_decrypt(self, message, nonce):
         """
+        :param nonce: the nonce used in AES
         :param message: message to decrypt
         :return: decrypted message
         """
-        cipher = AES.new(self._sym_key, AES.MODE_CTR)
+        cipher = AES.new(self._sym_key, AES.MODE_EAX, nonce=nonce)
         decrypted = cipher.decrypt(message)
         return decrypted
 
     def sym_encrypt(self, message):
         """
         :param message: message to encrypt
-        :return: encrypted message
+        :return: encrypted message and the nonce used
         """
-        cipher = AES.new(self._sym_key, AES.MODE_CTR)
+        cipher = AES.new(self._sym_key, AES.MODE_EAX)
+        nonce = cipher.nonce
         encrypted = cipher.encrypt(message)
-        return encrypted
+        return encrypted, nonce
 
     def share_public_key(self):
         return self._keypair.publickey()
@@ -76,22 +78,22 @@ class Server:
             self._sym_key = sym_key
             full_message = self.RSA_encrypt(decrypted_secret + sym_key,
                                             client_key)
-            print(sym_key, "MESSAGE SENT")
             return full_message
         else:
             print("I don't trust this IP!")
             return None
 
-    def handle_vote(self, message):
+    def handle_vote(self, message, nonce):
         """
         :param message: the message containing the vote of the client
         :return: the vote & verification that the storage will use
         """
-        message = self.sym_decrypt(message)
-        vote = message[15:]  # TODO vaste votelengte definieren
-        verification = message[:15]  # TODO vaste verification lengte definieren
-        print(vote,"IS DECRYPT V")
-        print(verification,"IS DECRYPT ID")
+        message = self.sym_decrypt(message, nonce)
+        if len(message) != 32:
+            print("message length is wrong!")
+            return None
+        vote = message[16:]  # TODO vaste votelengte definieren
+        verification = message[:16]  # TODO vaste verification lengte definieren
         # Dit moet naar storage voor checken
         return vote, verification
 
@@ -105,16 +107,18 @@ class Server:
             return None
         else:
             # Encrypt
-            encrypted_message = self.sym_encrypt(response)
-            return encrypted_message
+            encrypted_message, nonce = self.sym_encrypt(response)
+            return encrypted_message, nonce
 
-    def handle_vote_request(self, message):
+    def handle_vote_request(self, message, nonce):
         """
-        :param vote_ID: The ID of the vote encrypted with sym_encr
+        :param nonce: The nonce used in AES
+        :param message: The ID of the vote encrypted with sym_encr
         :return:
         """
-        decrypted_id = self.sym_decrypt(message)
+        decrypted_id = self.sym_decrypt(message, nonce)
         # This should be passed to storage
+        # If ID is wrong the storage server should return false
         return decrypted_id
 
     def handle_storage_ID_respone(self, response):
@@ -127,5 +131,5 @@ class Server:
             return None
         else:
             # Encrypt
-            encrypted_message = self.sym_encrypt(response)
-            return encrypted_message
+            encrypted_message, nonce = self.sym_encrypt(response)
+            return encrypted_message, nonce
