@@ -15,6 +15,7 @@ class Client:
         self._sym_key = None
         self._id_number = None
         self._identification = get_random_bytes(16)
+        self._vote = None
 
     def RSA_decrypt(self, message):
         """
@@ -80,6 +81,7 @@ class Client:
     def generate_vote(self, candidate):
         if len(candidate) != 16:
             raise Exception("Wrong candidate length!")
+        self._vote = candidate
 
         vote_message = candidate + self._identification
         encrypted_message, nonce = self.sym_encrypt(vote_message)
@@ -87,13 +89,18 @@ class Client:
 
     def store_vote_id(self, encrypted_id, nonce):
         decrypted_id = self.sym_decrypt(encrypted_id, nonce)
+        if decrypted_id[:2] != b'ID' or not all(chr(char).isdigit() for char in decrypted_id[2:]):
+            print(decrypted_id)
+            raise Exception("Recieved invalid voter ID!")
         self._id_number = decrypted_id
+        
 
     def send_voter_id(self):
         encrypted_id, nonce = self.sym_encrypt(self._id_number)
-
         return encrypted_id, nonce
 
     def recieve_vote(self,encrypted_vote, nonce):
         decrypted_vote = self.sym_decrypt(encrypted_vote, nonce)
         print(decrypted_vote)
+        if decrypted_vote != self._vote:
+            raise Exception("Original candidate doesn't match!")

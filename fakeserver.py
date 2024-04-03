@@ -63,18 +63,18 @@ class FakeServer:
                                             client_key)
         return full_message
 
-    def send_fake_vote_response(self):
+    def send_fake_ID_response(self):
         """
         :return: sym encrypted message with the random verification ID of the vote
         """
         fake_id = b'FAKE ID'
-        encrypted_message, nonce = self.sym_encrypt(response)
+        encrypted_message, nonce = self.sym_encrypt(fake_id)
         return encrypted_message, nonce
 
-    def send_fake_ID_response(self):
+    def send_fake_vote_response(self):
         """
         :return: fake sym encrypted message with the random verification ID of the vote
         """
-        fake_vote = "16karakters_fake"
-        encrypted_message = self.sym_encrypt(fake_vote)
-        return encrypted_message
+        fake_vote = b'16karakters_fake'
+        encrypted_message, nonce = self.sym_encrypt(fake_vote)
+        return encrypted_message, nonce
