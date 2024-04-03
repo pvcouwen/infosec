@@ -1,12 +1,46 @@
 from Server import Server
 
 from client import Client
+from fakeclient import fakeClient
 
-# This main script simulates all communcation lines between Client Server and Storage
+
+# This main script simulates all communication lines between Client Server and Storage
+# The server and client objects represent one connection between a client and a server
 # We assume that everything that passes between Client and Server is over the internet can be eavesdropped
 # Communication between Server and Storage is over a secure bus
 
+def blocked_ip_connect():
+    # Blocked IP vote send
+    server2 = Server()
+    client2 = Client(2)
+    client2.generate_public_key_request()
+    # Client -> Server : Client requests public key
+    public_key = server2.share_public_key()
+    # Server -> Client : Server gives public key
+    client_key, verification_secret, ip = client2.generate_sym_key_request(public_key)
+    # Client -> Server : Client requests symmetric key by sending secret, his public key and ip
+    sym_key_message = server2.handle_sym_key_request(client_key, verification_secret, ip)
+    # Server -> Client : Server sends symmetric key + secret
+
+def bad_client_sends_own_pubkey():
+    # Vote sending
+    server = Server()
+    client = Client(1)
+    fakeclient = fakeClient(1)
+    client.generate_public_key_request()
+    # Client -> Server : Client requests public key
+    public_key = server.share_public_key()
+    # Server -> Client : Server gives public key
+    client_key, verification_secret, ip = client.generate_sym_key_request(public_key)
+    malclient_key, verification_secret, ip = fakeclient.intercept_sym_key_req_replace_pub_key(verification_secret, ip)
+    # Client -> Server : Client requests symmetric key by sending secret, his public key and ip
+    sym_key_message = server.handle_sym_key_request(malclient_key, verification_secret, ip)
+    # Server -> Client : Server sends symmetric key + secret
+    client.recieve_sym_key(sym_key_message)
+
+
 if __name__ == "__main__":
+    bad_client_sends_own_pubkey()
     # Vote sending
     server = Server()
     client = Client(1)
