@@ -12,6 +12,7 @@ class Server:
 
     def RSA_decrypt(self, message):
         """
+        RSA decryption
         :param message: message to decrypt
         :return: decrypted message
         """
@@ -21,7 +22,7 @@ class Server:
 
     def RSA_encrypt(self, message, key):
         """
-
+        RSA key encryption
         :param message: message to encrypt
         :param key: public key to use
         :return: encrypted message
@@ -32,6 +33,7 @@ class Server:
 
     def sym_decrypt(self, message, nonce):
         """
+        Symmetric key decryption using AES
         :param nonce: the nonce used in AES
         :param message: message to decrypt
         :return: decrypted message
@@ -42,6 +44,7 @@ class Server:
 
     def sym_encrypt(self, message):
         """
+        Symmetric key encryption using AES
         :param message: message to encrypt
         :return: encrypted message and the nonce used
         """
@@ -55,18 +58,19 @@ class Server:
 
     def firewall(self, ip):
         """
+        Just a simple representation of where DDOS protection would fit
+        Ideally this would be much more complex using metadata of the sender and IP
+        But for this demonstration its just a simple IP checker
         :param ip: ip to check
         :return: True if ip is OK, else false
         """
-        # Just a simple representation of where DDOS protection would fit
-        # Ideally this would be much more complex using metadata of the sender and IP
-        # But for this demonstration its just a simple IP checker
         if ip in self._bad_ips:
             return False
         return True
 
     def handle_sym_key_request(self, client_key, verification_secret, ip):
         """
+        Handles RSA encrypted request for a symmetric key
         :param client_key: public key of the client
         :param verification_secret: verification secret sent by client
         :param ip: ip of client for firewall
@@ -85,6 +89,8 @@ class Server:
 
     def handle_vote(self, message, nonce):
         """
+        Handles symmetrically encrypted vote submissions
+        :param nonce: The nonce used in AES
         :param message: the message containing the vote of the client
         :return: the vote & verification that the storage will use
         """
@@ -99,6 +105,7 @@ class Server:
 
     def handle_storage_vote_response(self, response):
         """
+        Handles responses from storage after a vote submission
         :param response: the storage servers response, either the vote ID or False
         :return: sym encrypted message with the random verification ID of the vote
         """
@@ -112,6 +119,7 @@ class Server:
 
     def handle_vote_request(self, message, nonce):
         """
+        Handles vote requests from client
         :param nonce: The nonce used in AES
         :param message: The ID of the vote encrypted with sym_encr
         :return:
@@ -123,6 +131,7 @@ class Server:
 
     def handle_storage_ID_respone(self, response):
         """
+        Handles storage response after a vote request
         :param response: the storage servers response, either the vote data or False
         :return: sym encrypted message with the random verification ID of the vote
         """
