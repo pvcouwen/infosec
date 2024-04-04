@@ -146,7 +146,7 @@ def blocked_ip_connect():
     sym_key_message = server2.handle_sym_key_request(client_key, verification_secret, ip)
     # Server -> Client : Server sends symmetric key + secret
 
-def bad_client_sends_own_pubkey():
+def test_fake_client_sends_own_pubkey():
     # Vote sending
     server = Server()
     client = Client(1)
@@ -161,6 +161,79 @@ def bad_client_sends_own_pubkey():
     sym_key_message = server.handle_sym_key_request(malclient_key, verification_secret, ip)
     # Server -> Client : Server sends symmetric key + secret
     client.recieve_sym_key(sym_key_message)
+
+def test_fake_client_sends_tampered_vote():
+    # Legitimate voting test
+    # Vote sending
+    server = Server()
+    client = Client(1)
+    fakeclient = fakeClient(1)
+    client.generate_public_key_request()
+    # Client -> Server : Client requests public key
+    public_key = server.share_public_key()
+    # Server -> Client : Server gives public key
+    client_key, verification_secret, ip = client.generate_sym_key_request(public_key)
+    # Client -> Server : Client requests symmetric key by sending secret, his public key and ip
+    sym_key_message = server.handle_sym_key_request(client_key, verification_secret, ip)
+    # Server -> Client : Server sends symmetric key + secret
+    client.recieve_sym_key(sym_key_message)
+    vote_message, nonce = client.generate_vote(b'16karakters_lang')
+    # fakeclient intercepts client message and replaces it
+    vote_message, nonce = fakeclient.intercept_send_vote_replace_vote_and_verify()
+    vote, verification = server.handle_vote(vote_message, nonce)
+    # Server cannot correctly decipher the vote because the sym key is wrong
+    # TODO verification should be wrongly decoded at server side so storage cannot be able to handle that
+    # Server sends vote & verification to storage to check if it can be added
+    # Storage sends back vote ID if OK
+    storage_response = b'ID21345'  # Storage.handle_vote()
+    encrypted_ID, nonce = server.handle_storage_vote_response(storage_response)
+    client.store_vote_id(encrypted_ID, nonce)
+
+def test_fake_client_sends_own_ID():
+    # Fake server tries sending fake vote confirmation with its own generated vote candidate
+    # Vote sending
+    server = Server()
+    client = Client(1)
+    fakeclient = fakeClient(2)
+    client.generate_public_key_request()
+    # Client -> Server : Client requests public key
+    public_key = server.share_public_key()
+    # Server -> Client : Server gives public key
+    client_key, verification_secret, ip = client.generate_sym_key_request(public_key)
+    # Client -> Server : Client requests symmetric key by sending secret, his public key and ip
+    sym_key_message = server.handle_sym_key_request(client_key, verification_secret, ip)
+    # Server -> Client : Server sends symmetric key + secret
+    client.recieve_sym_key(sym_key_message)
+    vote_message, nonce = client.generate_vote(b'16karakters_lang')
+    vote, verification = server.handle_vote(vote_message, nonce)
+    # Server sends vote & verification to storage to check if it can be added
+    # Storage sends back vote ID if OK
+    storage_response = b'ID123'  # Storage.handle_vote()
+    encrypted_ID, nonce = server.handle_storage_vote_response(storage_response)
+    client.store_vote_id(encrypted_ID, nonce)
+
+    # Vote checking
+    client.generate_public_key_request()
+    # Client -> Server : Client requests public key
+    public_key = server.share_public_key()
+    # Server -> Client : Server gives public key
+    client_key, verification_secret, ip = client.generate_sym_key_request(public_key)
+    # Client -> Server : Client requests symmetric key by sending secret, his public key and ip
+    sym_key_message = server.handle_sym_key_request(client_key, verification_secret, ip)
+    # Server -> Client : Server sends symmetric key + secret
+    client.recieve_sym_key(sym_key_message)
+    # Server -> Client : Server sends symmetric key + secret
+    encrypted_vote_ID, nonce = client.send_voter_id()
+    encrypted_vote_ID, nonce = fakeclient.intercept_vote_ID_replace_ID()
+    # Client -> Server : Client sends vote ID
+    decrypted_id = server.handle_vote_request(encrypted_vote_ID, nonce)
+    # Server -> Storage : decrypted ID sent to storage to check
+    # TODO ID should be wrongle decoded at server side so storage cannot be able to handle that
+    storage_response = b"16karakters_lang"  # = Storage.handle_id()
+    # Storage -> Server : vote message sent to server
+    encrypted_vote, nonce = server.handle_storage_vote_response(storage_response)
+    # Server -> Client : Server sends encrypted vote message to client
+    client.recieve_vote(encrypted_vote, nonce)
 
 if __name__ == "__main__":
     test_voting()
