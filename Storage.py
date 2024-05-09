@@ -28,9 +28,9 @@ class Storage:
     -------
     create_tables():
         Creates the necessary tables in the SQLite database.
-    create_voter(hashed_val):
+    create_voter(verification):
         Adds a new voter to the UserData table.
-    __check_voter(hashed_val):
+    __check_voter(verification):
         Checks if a voter already exists in the UserData table.
     read_voters():
         Fetches and prints all voters from the UserData table (for testing purposes only).
@@ -87,9 +87,8 @@ class Storage:
         if self.__check_voter(verification):
             raise ValueError('Voter already exists')
         else:
-            # encrypted_data = self.__cipher.encrypt(str(hashed_val).encode()) # Not sure if this is necessary
             id = uuid4().bytes
-            self.__cursor.execute('INSERT INTO UserData VALUES (?, ?)', (id, hashed_val))
+            self.__cursor.execute('INSERT INTO UserData VALUES (?, ?)', (id, verification))
             self.__connection.commit()
             token = str(token_urlsafe(32))
             self.__add_vote_token(id, token)

@@ -5,13 +5,15 @@ class Storage_secret(object):
     This is a singleton class that handles the storage of nonces in a SQLite database.
     """
 
+    __instance = None
+
     def __new__(cls):
         """
         Ensures that only one instance of the class can be created.
         """
         if not hasattr(cls, 'instance'):
-            cls.instance = super(Storage_secret, cls).__new__(cls)
-        return cls.instance
+            cls.__instance = super(Storage_secret, cls).__new__(cls)
+        return cls.__instance
 
     def __init__(self):
         """
@@ -58,6 +60,7 @@ class Storage_secret(object):
             SELECT nonce FROM NonceTable WHERE id = ?
         ''', (id,))
         return self.__cursor.fetchone()[0]
+    
     def close_connection(self):
         """Closes the connection to the SQLite database."""
         self.__cursor.close()
