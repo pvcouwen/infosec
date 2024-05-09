@@ -66,7 +66,7 @@ class Storage:
         self.__cursor.execute('''
             CREATE TABLE IF NOT EXISTS VoteTable (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                vote TEXT
+                vote BLOB
             )
         ''')
         self.__cursor.execute('''
@@ -128,9 +128,12 @@ class Storage:
         """
         self.__cursor.execute('SELECT * FROM VoteTable WHERE id = ?', (id,))
         result = self.__cursor.fetchone()
-        cipher = AES.new(self.__key, AES.MODE_EAX, nonce=nonce)
+        cipher = AES.new(self.__key, AES.MODE_EAX, nonce=self.__nonce)
         if result:
             vote = cipher.decrypt(result[1])
+            print("storage vote:")
+            print(str(vote))
+            print("end storage vote")
             return vote
 
     def vote(self, id, vote, token):
@@ -148,9 +151,9 @@ class Storage:
         """
         valid_vote = self.__remove_vote_token(id, token)
         if valid_vote:
-            encrypted_data = self.__cipher.encrypt(str(vote).encode())
+            encrypted_data = self.__cipher.encrypt(vote)
             self.__cursor.execute('INSERT INTO VoteTable (vote) VALUES (?)', (encrypted_data,))
-            return self.__cursor.lastrowid, self.__nonce
+            return str(self.__cursor.lastrowid), self.__nonce
         else:
             raise ValueError('Invalid vote token')
 
@@ -189,3 +192,6 @@ class Storage:
         self.__connection.commit()
         self.__cursor.close()
         self.__connection.close()
+
+    def __del__(self):
+        close_connection()

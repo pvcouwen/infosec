@@ -26,11 +26,16 @@ def test_voting():
     # Server -> Client : Server sends symmetric key + secret
     client.recieve_sym_key(sym_key_message)
     vote_message, nonce = client.generate_vote(b'16karakters_lang')
+    print("main vote msg:")
+    print(vote_message)
     vote, verification = server.handle_vote(vote_message, nonce)
+    print("main vote:")
+    print(vote)
     # Server sends vote & verification to storage to check if it can be added
     storage = Storage()
     id, token = storage.create_voter(verification)
     storage_response, storage_response_nonce = storage.vote(id, vote, token)
+    storage_response = ("ID"+storage_response).encode()
     storage_secret = Storage_secret()
     storage_secret.add_nonce(id, storage_response_nonce)
     # Storage sends back vote ID if OK
@@ -50,12 +55,17 @@ def test_voting():
     # Server -> Client : Server sends symmetric key + secret
     encrypted_vote_ID, nonce = client.send_voter_id()
     # Client -> Server : Client sends vote ID
-    decrypted_id = server.handle_vote_request(encrypted_vote_ID, nonce)
+    decrypted_id = int(server.handle_vote_request(encrypted_vote_ID, nonce)[2:])
+    print(decrypted_id)
     # Server -> Storage : decrypted ID sent to storage to check
     storage_nonce = storage_secret.get_nonce(decrypted_id)
     storage_response = storage.read_vote(decrypted_id, storage_nonce)
+    print("storage response:")
+    print(storage_response)
     # Storage -> Server : vote message sent to server
     encrypted_vote, nonce = server.handle_storage_ID_respone(storage_response)
+    print("encrypted vote")
+    print(encrypted_vote)
     # Server -> Client : Server sends encrypted vote message to client
     client.recieve_vote(encrypted_vote, nonce)
 
