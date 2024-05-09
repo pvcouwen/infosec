@@ -4,6 +4,7 @@ from fakeserver import FakeServer
 from client import Client
 from fakeclient import fakeClient
 from Storage_secret import Storage_secret
+from uuid import uuid4
 
 
 # This main script simulates all communication lines between Client Server and Storage
@@ -68,6 +69,7 @@ def test_voting():
     print(encrypted_vote)
     # Server -> Client : Server sends encrypted vote message to client
     client.recieve_vote(encrypted_vote, nonce)
+    storage.close_connection()
 
 def test_server_fake_sym_key():
     # Fake server tries sending its own symmetric key and incorrect verification secret
@@ -261,6 +263,27 @@ def test_fake_client_sends_own_ID():
     encrypted_vote, nonce = server.handle_storage_vote_response(storage_response)
     # Server -> Client : Server sends encrypted vote message to client
     client.recieve_vote(encrypted_vote, nonce)
+
+def test_invalid_db_access():
+    # Malicious user tries to access the database with an invalid ID
+    storage = Storage()
+    id, token = storage.create_voter(uuid4().bytes)
+    vote = str('16karakters_lang').encode()
+    storage_response, storage_response_nonce = storage.vote(id, vote, token)
+    storage_secret = Storage_secret()
+    storage_secret.add_nonce(str(storage_response), str(storage_response_nonce))
+    storage_response_invalid = b'ID123'
+    storage_nonce = storage_secret.get_nonce(str(storage_response_invalid))
+    storage_response = storage.read_vote(storage_response, storage_nonce.encode())
+    print("storage response:")
+    print(storage_response)
+
+def test_vote_with_invalid_token():
+    storage = Storage()
+    verification = uuid4().bytes
+    id, _ = storage.create_voter(verification)
+    vote = str('16karakters_lang').encode()
+    storage.vote(id, vote, 'invalid_token')
 
 if __name__ == "__main__":
     test_voting()

@@ -9,8 +9,6 @@ class Storage:
     """
     A class used to represent a secure storage system.
 
-    ...
-
     Attributes
     ----------
     __key : bytes
@@ -32,10 +30,8 @@ class Storage:
         Adds a new voter to the UserData table.
     __check_voter(verification):
         Checks if a voter already exists in the UserData table.
-    read_voters():
-        Fetches and prints all voters from the UserData table (for testing purposes only).
-    read_votes():
-        Fetches and prints all votes from the VoteTable (for testing purposes only).
+    read_vote(id, nonce):
+        Fetches a vote from the VoteTable using the provided id and nonce.
     vote(id, vote, token):
         Adds a vote to the VoteTable if the vote token is valid.
     __add_vote_token(id, token):
@@ -47,7 +43,10 @@ class Storage:
     """
 
     def __init__(self):
-        """The constructor for the Storage class."""
+        """
+        The constructor for the Storage class. It initializes the encryption key, AES cipher object, SQLite database connection and cursor, and nonce for the AES cipher.
+        It also calls the create_tables method to create the necessary tables in the SQLite database.
+        """
         self.__key = PBKDF2('ThisShouldbeAVerySecurePASSWORD123321', b'WfyiXVeh}0)w6X=A(fPV,Esxba>!-@', dkLen=32) # Only for demonstration purposes
         self.__cipher = AES.new(self.__key, AES.MODE_EAX)
         self.__connection = sqlite3.connect('secure_data.db')
@@ -56,7 +55,9 @@ class Storage:
         self.create_tables()
 
     def create_tables(self):
-        """Creates the necessary tables in the SQLite database."""
+        """
+        Creates the necessary tables in the SQLite database. These tables are UserData, VoteTable, and VoteTokenTable.
+        """
         self.__cursor.execute('''
             CREATE TABLE IF NOT EXISTS UserData (
                 id BLOB PRIMARY KEY,
@@ -79,10 +80,16 @@ class Storage:
 
     def create_voter(self, verification):
         """
-        Adds a new voter to the UserData table.
+        Adds a new voter to the UserData table. It generates a unique ID and a token for the voter, and stores them in the UserData and VoteTokenTable respectively.
 
         Parameters:
             verification (str): The verification value of the user.
+
+        Returns:
+            tuple: A tuple containing the unique ID and token of the voter.
+
+        Raises:
+            ValueError: If the voter already exists in the UserData table.
         """
         if self.__check_voter(verification):
             raise ValueError('Voter already exists')
@@ -112,7 +119,7 @@ class Storage:
 
     def read_vote(self, id, nonce):
         """
-        Fetches a vote from the VoteTable using the provided id and nonce.
+        Fetches a vote from the VoteTable using the provided id and nonce. It decrypts the vote using the AES cipher object and the provided nonce.
 
         This method is primarily used for testing purposes to verify that votes are being correctly stored and can be retrieved.
 
@@ -128,17 +135,14 @@ class Storage:
         """
         self.__cursor.execute('SELECT * FROM VoteTable WHERE id = ?', (id,))
         result = self.__cursor.fetchone()
-        cipher = AES.new(self.__key, AES.MODE_EAX, nonce=self.__nonce)
+        cipher = AES.new(self.__key, AES.MODE_EAX, nonce=eval(nonce))
         if result:
             vote = cipher.decrypt(result[1])
-            print("storage vote:")
-            print(str(vote))
-            print("end storage vote")
             return vote
 
     def vote(self, id, vote, token):
         """
-        Adds a vote to the VoteTable if the vote token is valid.
+        Adds a vote to the VoteTable if the vote token is valid. It encrypts the vote using the AES cipher object before storing it in the VoteTable.
 
         Parameters:
             id (bytes): The ID of the voter.
@@ -146,8 +150,10 @@ class Storage:
             token (str): The vote token.
 
         Returns:
-            int: The ID of the last inserted row in the VoteTable.
-            bytes: The nonce used for encryption.
+            tuple: A tuple containing the ID of the last inserted row in the VoteTable and the nonce used for encryption.
+
+        Raises:
+            ValueError: If the vote token is invalid.
         """
         valid_vote = self.__remove_vote_token(id, token)
         if valid_vote:
@@ -188,10 +194,15 @@ class Storage:
         return False
 
     def close_connection(self):
-        """Closes the connection to the SQLite database."""
+        """
+        Closes the connection to the SQLite database. It commits any changes, closes the cursor, and then closes the connection.
+        """
         self.__connection.commit()
         self.__cursor.close()
         self.__connection.close()
 
     def __del__(self):
-        close_connection()
+        """
+        The destructor for the Storage class. It calls the close_connection method to close the connection to the SQLite database.
+        """
+        self.close_connection()
