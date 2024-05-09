@@ -1,7 +1,9 @@
 from Server import Server
+from Storage import Storage
 from fakeserver import FakeServer
 from client import Client
 from fakeclient import fakeClient
+from Storage_secret import Storage_secret
 
 
 # This main script simulates all communication lines between Client Server and Storage
@@ -26,8 +28,12 @@ def test_voting():
     vote_message, nonce = client.generate_vote(b'16karakters_lang')
     vote, verification = server.handle_vote(vote_message, nonce)
     # Server sends vote & verification to storage to check if it can be added
+    storage = Storage()
+    id, token = storage.create_voter(verification)
+    storage_response, storage_response_nonce = storage.vote(id, vote, token)
+    storage_secret = Storage_secret()
+    storage_secret.add_nonce(id, storage_response_nonce)
     # Storage sends back vote ID if OK
-    storage_response = b'ID21345'  # Storage.handle_vote()
     encrypted_ID, nonce = server.handle_storage_vote_response(storage_response)
     client.store_vote_id(encrypted_ID, nonce)
 
@@ -46,7 +52,8 @@ def test_voting():
     # Client -> Server : Client sends vote ID
     decrypted_id = server.handle_vote_request(encrypted_vote_ID, nonce)
     # Server -> Storage : decrypted ID sent to storage to check
-    storage_response = b"16karakters_lang"  # = Storage.handle_id()
+    storage_nonce = storage_secret.get_nonce(decrypted_id)
+    storage_response = storage.read_vote(decrypted_id, storage_nonce)
     # Storage -> Server : vote message sent to server
     encrypted_vote, nonce = server.handle_storage_ID_respone(storage_response)
     # Server -> Client : Server sends encrypted vote message to client
@@ -163,7 +170,6 @@ def test_fake_client_sends_own_pubkey():
     client.recieve_sym_key(sym_key_message)
 
 def test_fake_client_sends_tampered_vote():
-    # Legitimate voting test
     # Vote sending
     server = Server()
     client = Client(1)
@@ -184,13 +190,18 @@ def test_fake_client_sends_tampered_vote():
     # Server cannot correctly decipher the vote because the sym key is wrong
     # TODO verification should be wrongly decoded at server side so storage cannot be able to handle that
     # Server sends vote & verification to storage to check if it can be added
+    storage = Storage()
+    id, token = storage.create_voter(verification)
+    storage_response, storage_response_nonce = storage.vote(id, vote, token)
+    storage_secret = Storage_secret()
+    storage_secret.add_nonce(id, storage_response_nonce)
     # Storage sends back vote ID if OK
     storage_response = b'ID21345'  # Storage.handle_vote()
     encrypted_ID, nonce = server.handle_storage_vote_response(storage_response)
     client.store_vote_id(encrypted_ID, nonce)
 
 def test_fake_client_sends_own_ID():
-    # Fake server tries sending fake vote confirmation with its own generated vote candidate
+    # Fake client tries sending fake vote confirmation with its own generated vote candidate
     # Vote sending
     server = Server()
     client = Client(1)
@@ -207,6 +218,7 @@ def test_fake_client_sends_own_ID():
     vote_message, nonce = client.generate_vote(b'16karakters_lang')
     vote, verification = server.handle_vote(vote_message, nonce)
     # Server sends vote & verification to storage to check if it can be added
+
     # Storage sends back vote ID if OK
     storage_response = b'ID123'  # Storage.handle_vote()
     encrypted_ID, nonce = server.handle_storage_vote_response(storage_response)
@@ -229,6 +241,11 @@ def test_fake_client_sends_own_ID():
     decrypted_id = server.handle_vote_request(encrypted_vote_ID, nonce)
     # Server -> Storage : decrypted ID sent to storage to check
     # TODO ID should be wrongle decoded at server side so storage cannot be able to handle that
+    storage = Storage()
+    id, token = storage.create_voter(verification)
+    storage_response, storage_response_nonce = storage.vote(id, vote, token)
+    storage_secret = Storage_secret()
+    storage_secret.add_nonce(id, storage_response_nonce)
     storage_response = b"16karakters_lang"  # = Storage.handle_id()
     # Storage -> Server : vote message sent to server
     encrypted_vote, nonce = server.handle_storage_vote_response(storage_response)

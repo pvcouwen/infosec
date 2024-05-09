@@ -40,7 +40,7 @@ class Storage:
         Adds a vote to the VoteTable if the vote token is valid.
     __add_vote_token(id, token):
         Adds a vote token to the VoteTokenTable.
-    remove_vote_token(id, token):
+    __remove_vote_token(id, token):
         Removes a vote token from the VoteTokenTable if it exists.
     close_connection():
         Closes the connection to the SQLite database.
@@ -77,14 +77,14 @@ class Storage:
         ''')
         self.__connection.commit()
 
-    def create_voter(self, hashed_val):
+    def create_voter(self, verification):
         """
         Adds a new voter to the UserData table.
 
         Parameters:
-            hashed_val (str): The hashed value of the voter's information.
+            verification (str): The verification value of the user.
         """
-        if self.__check_voter(hashed_val):
+        if self.__check_voter(verification):
             raise ValueError('Voter already exists')
         else:
             # encrypted_data = self.__cipher.encrypt(str(hashed_val).encode()) # Not sure if this is necessary
@@ -95,44 +95,45 @@ class Storage:
             self.__add_vote_token(id, token)
             return id, token
 
-    def __check_voter(self, hashed_val):
+    def __check_voter(self, verification):
         """
         Checks if a voter already exists in the UserData table.
 
         Parameters:
-            hashed_val (str): The hashed value of the voter's information.
+            verification (str): The verification value of the user.
 
         Returns:
             bool: True if the voter exists, False otherwise.
         """
-        self.__cursor.execute('SELECT * FROM UserData WHERE hashed_val = ?', (hashed_val,))
+        self.__cursor.execute('SELECT * FROM UserData WHERE hashed_val = ?', (verification,))
         result = self.__cursor.fetchone()
         if result:
             return True
         return False
 
-    '''# Dont use this function
-    def read_voters(self):
-        """Fetches and prints all voters from the UserData table (for testing purposes only)."""
-        self.__cursor.execute('SELECT * FROM UserData')
+    def read_vote(self, id, nonce):
+        """
+        Fetches a vote from the VoteTable using the provided id and nonce.
+
+        This method is primarily used for testing purposes to verify that votes are being correctly stored and can be retrieved.
+
+        Parameters:
+            id (bytes): The ID of the voter. This should be a unique identifier that was used when the vote was stored.
+            nonce (bytes): The nonce used for encryption. This should be the same nonce that was used when the vote was encrypted.
+
+        Returns:
+            bytes: The decrypted vote associated with the given ID. If no vote is found, None is returned.
+
+        Raises:
+            ValueError: If the provided nonce does not match the nonce used for encryption.
+        """
+        self.__cursor.execute('SELECT * FROM VoteTable WHERE id = ?', (id,))
         result = self.__cursor.fetchone()
-        cipher = AES.new(self.__key, AES.MODE_EAX, nonce=self.__nonce)
-        if result:
-            hashed_val = cipher.decrypt(result[1])
-            print(result)
-            print(hashed_val)
-    
-    # Dont use this function
-    def read_votes(self):
-        """Fetches and prints all votes from the VoteTable (for testing purposes only)."""
-        self.__cursor.execute('SELECT * FROM VoteTable')
-        result = self.__cursor.fetchone()
-        cipher = AES.new(self.__key, AES.MODE_EAX, nonce=self.__nonce)
+        cipher = AES.new(self.__key, AES.MODE_EAX, nonce=nonce)
         if result:
             vote = cipher.decrypt(result[1])
-            print(result)
-            print(vote)
-    '''
+            return vote
+
     def vote(self, id, vote, token):
         """
         Adds a vote to the VoteTable if the vote token is valid.
@@ -146,7 +147,7 @@ class Storage:
             int: The ID of the last inserted row in the VoteTable.
             bytes: The nonce used for encryption.
         """
-        valid_vote = self.remove_vote_token(id, token)
+        valid_vote = self.__remove_vote_token(id, token)
         if valid_vote:
             encrypted_data = self.__cipher.encrypt(str(vote).encode())
             self.__cursor.execute('INSERT INTO VoteTable (vote) VALUES (?)', (encrypted_data,))
@@ -165,7 +166,7 @@ class Storage:
         self.__cursor.execute('INSERT INTO VoteTokenTable VALUES (?, ?)', (id, token))
         self.__connection.commit()
 
-    def remove_vote_token(self, id, token):
+    def __remove_vote_token(self, id, token):
         """
         Removes a vote token from the VoteTokenTable if it exists.
 
@@ -189,10 +190,3 @@ class Storage:
         self.__connection.commit()
         self.__cursor.close()
         self.__connection.close()
-
-
-# Example usage
-# storage = Storage()
-# id, token = storage.create_voter('hashed_value') # We can also just get the token inside the vote function, id must be returned
-# storage.vote(id, 'Partij 1 codewoord', token)
-# storage.close_connection()
