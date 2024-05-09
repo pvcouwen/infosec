@@ -58,3 +58,7 @@ class Storage_secret(object):
             SELECT nonce FROM NonceTable WHERE id = ?
         ''', (id,))
         return self.__cursor.fetchone()[0]
+    def close_connection(self):
+        """Closes the connection to the SQLite database."""
+        self.__cursor.close()
+        self.__connection.close()
